@@ -541,11 +541,11 @@ EXPORT_SYMBOL(hs_micbias_power);
 ************************************************************/
 static int __init headset_init(void)
 {
+	int ret;
 	u32 project_info = grouper_get_project_id();
 	u32 pmic_id = grouper_query_pmic_id();
 
 	printk(KERN_INFO "%s+ #####\n", __func__);
-	int ret;
 
 	printk("HEADSET: Headset detection init\n");
 

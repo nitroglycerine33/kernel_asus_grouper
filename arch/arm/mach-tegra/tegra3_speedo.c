@@ -129,6 +129,13 @@ static int cpu_speedo_id;
 static int soc_speedo_id;
 static int package_id;
 
+#ifdef CONFIG_TEGRA_VARIANT_INFO
+int orig_cpu_process_id;
+int orig_core_process_id;
+int orig_cpu_speedo_id;
+int orig_soc_speedo_id;
+#endif
+
 static void fuse_speedo_calib(u32 *speedo_g, u32 *speedo_lp)
 {
 	u32 reg;
@@ -233,9 +240,21 @@ static void rev_sku_to_speedo_ids(int rev, int sku)
 		case 0x83: /* T30L or T30S */
 			switch (package_id) {
 			case 1: /* MID => T30L */
+#ifdef CONFIG_TEGRA_VARIANT_INFO
+				/* save it for T3 Variant info */
+				orig_cpu_speedo_id = 7;
+				orig_soc_speedo_id = 1;
+#endif
+#ifdef CONFIG_TEGRA_CPU_OVERCLOCK
+			/* fake it to behave as AP33 variant */
+				cpu_speedo_id = 4;
+				soc_speedo_id = 1;
+				threshold_index = 7;
+#else
 				cpu_speedo_id = 7;
 				soc_speedo_id = 1;
 				threshold_index = 10;
+#endif
 				break;
 			case 2: /* DSC => T30S */
 				cpu_speedo_id = 3;
@@ -428,7 +447,15 @@ void tegra_init_speedo_data(void)
 			break;
 		}
 	}
+#ifdef CONFIG_TEGRA_VARIANT_INFO
 	cpu_process_id = iv -1;
+	orig_cpu_process_id = cpu_process_id;
+#endif
+#ifdef CONFIG_TEGRA_CPU_OVERCLOCK
+	cpu_process_id = 3; /* fake it to behave as AP33 cpu variant 3 */
+#else
+	cpu_process_id = iv -1;
+#endif
 
 	if (cpu_process_id == -1) {
 		pr_err("****************************************************");
@@ -448,7 +475,19 @@ void tegra_init_speedo_data(void)
 			break;
 		}
 	}
+#ifdef CONFIG_TEGRA_VARIANT_INFO
 	core_process_id = iv -1;
+	orig_core_process_id = core_process_id;
+#endif
+#ifdef CONFIG_TEGRA_CPU_OVERCLOCK
+#ifdef CONFIG_TEGRA3_LP_CORE_OVERDRIVE
+	core_process_id = 2; /* fake it to behave as AP33 core variant 2 */
+#else
+	core_process_id = 1; /* fake it to behave as AP33 core variant 1 */
+#endif
+#else
+	core_process_id = iv -1;
+#endif
 
 	if (core_process_id == -1) {
 		pr_err("****************************************************");
@@ -525,9 +564,11 @@ int tegra_core_speedo_mv(void)
 	case 0:
 		return 1200;
 	case 1:
+#ifndef CONFIG_TEGRA3_LP_CORE_OVERDRIVE
 		if ((cpu_speedo_id != 7) && (cpu_speedo_id != 8))
 			return 1200;
 		/* fall thru for T30L or T30SL */
+#endif
 	case 2:
 		if (cpu_speedo_id != 13)
 			return 1300;

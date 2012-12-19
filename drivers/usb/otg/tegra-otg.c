@@ -64,6 +64,11 @@ struct tegra_otg_data {
 };
 static struct tegra_otg_data *tegra_clone;
 
+#ifdef CONFIG_USB_OTG_ON_CHARGING
+static bool tegra_otg_on_charging = false;
+module_param(tegra_otg_on_charging, bool, 0664);
+#endif
+
 static inline unsigned long otg_readl(struct tegra_otg_data *tegra,
 				      unsigned int offset)
 {
@@ -230,8 +235,14 @@ static void irq_work(struct work_struct *work)
 		dev_info(tegra->otg.dev, "%s --> %s\n", tegra_state_name(from),
 					      tegra_state_name(to));
 
-		if (tegra->charger_cb)
-			tegra->charger_cb(to, from, tegra->charger_cb_data);
+		if (tegra->charger_cb) {
+			if (tegra_otg_on_charging)
+				/* enable v_bus detection for charging */
+				tegra->detect_vbus = true;
+			else
+				/* enable OTG to supply internal power */
+				tegra->charger_cb(to, from, tegra->charger_cb_data);				
+		}
 
 		if (to == OTG_STATE_A_SUSPEND) {
 			if (from == OTG_STATE_A_HOST)
@@ -270,7 +281,7 @@ static irqreturn_t tegra_otg_irq(int irq, void *data)
 		}
 	} else {
 		if ((val & USB_ID_INT_STATUS) || (val & USB_VBUS_INT_STATUS)) {
-			printk(KERN_INFO "%s(): WRONG! val = %#X\n", __func__, val);
+			printk(KERN_INFO "%s(): WRONG! val = %#X\n", __func__, (unsigned int)val);
 			val |= (USB_VBUS_INT_EN | USB_VBUS_WAKEUP_EN);
 			val |= (USB_ID_INT_EN | USB_ID_PIN_WAKEUP_EN);
 			otg_writel(tegra, val, USB_PHY_WAKEUP);

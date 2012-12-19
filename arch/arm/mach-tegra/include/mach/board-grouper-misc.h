@@ -183,6 +183,13 @@ unsigned int grouper_query_bt_wifi_module(void);
  */
 unsigned int grouper_query_pcba_revision(void);
 
+/* Query pin status of equipped pmic defined in PCB pins.
+ *   @ret unsigned int
+ *      Return unsigned integer to reflect the PCB pin status of equipped PCBA.
+ *      Otherwise -1 (Not supported) will be returned.
+ */
+unsigned int grouper_query_pmic_id(void);
+
 /* Query pin status of equipped audio codec defined in PCB pins.
  *   @ret unsigned int
  *      Return unsigned integer to reflect the PCB pin status of equipped PCBA.
